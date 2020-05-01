@@ -1,66 +1,28 @@
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
-	"github.com/tidwall/gjson"
 	"golang.org/x/net/html"
 )
 
 const (
-	eventSummaryURL = "https://www.wizards.com/Magic/PlaneswalkerPoints/JavaScript/GetEventSummary/"
-	pointHistoryURL = "https://www.wizards.com/Magic/PlaneswalkerPoints/JavaScript/GetPointsHistory/%s"
-
-	pwpCookieNameFmt = "PWP.ASPXAUTH=%s"
-
-	pointHistoryJSONPath = "Data.1.Value"
-	eventDataJSONPath    = "Data.Value"
-
-	saveFolder     = "data"
-	saveFileFormat = "event-%s.html"
+	saveFolder           = "data"
+	saveFileFormat       = "event-%s.html"
+	saveFileEventHistory = "eventnames.html"
 )
 
 var (
 	pwpCookieValue = ""
 	dciNumber      = ""
 )
-
-func getPointHistory(dcinumber string) string {
-	URL := fmt.Sprintf(pointHistoryURL, dcinumber)
-
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client := &http.Client{Transport: customTransport}
-
-	request, err := http.NewRequest("POST", URL, strings.NewReader(""))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer response.Body.Close()
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	res := gjson.Get(string(body), pointHistoryJSONPath).String()
-
-	return res
-}
 
 func parseEventIDs(pointHistory string) []string {
 	var eventIDs []string
@@ -99,36 +61,6 @@ func _parseEventIDs(links []string, n *html.Node) []string {
 	return links
 }
 
-func fetchEventData(eventID string) string {
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client := &http.Client{Transport: customTransport}
-
-	postPayload := fmt.Sprintf("ID=%s", eventID)
-	request, err := http.NewRequest("POST", eventSummaryURL, strings.NewReader(postPayload))
-	if err != nil {
-		log.Fatal(err)
-	}
-	request.Header.Set("cookie", fmt.Sprintf(pwpCookieNameFmt, pwpCookieValue))
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer response.Body.Close()
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if response.StatusCode != http.StatusOK {
-		log.Fatal(body)
-	}
-
-	return gjson.Get(string(body), eventDataJSONPath).String()
-}
-
 func fetchAndSaveEventData(eventID string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -136,6 +68,14 @@ func fetchAndSaveEventData(eventID string, wg *sync.WaitGroup) {
 
 	filename := path.Join(saveFolder, fmt.Sprintf(saveFileFormat, eventID))
 	err := ioutil.WriteFile(filename, data, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func savePointHistory(pointHistory string) {
+	filename := path.Join(saveFolder, saveFileEventHistory)
+	err := ioutil.WriteFile(filename, []byte(pointHistory), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,6 +98,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	savePointHistory(pointHistory)
 
 	var wg sync.WaitGroup
 
