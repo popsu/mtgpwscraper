@@ -1,0 +1,4 @@
+data/*
+backupdata/*
+run.sh
+__debug_bin

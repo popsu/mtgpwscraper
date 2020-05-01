@@ -88,8 +88,24 @@ func parseFlags() {
 	flag.Parse()
 }
 
+func parseEventFile(filename string) {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	text := string(content)
+
+	parseEvent(text)
+}
+
 func main() {
 	parseFlags()
+
+	filename := "data/event-504380.html"
+	parseEventFile(filename)
+
+	os.Exit(0)
 
 	pointHistory := getPointHistory(dciNumber)
 	eventIDs := parseEventIDs(pointHistory)
