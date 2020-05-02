@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -53,7 +54,8 @@ type Event struct {
 	players                    int
 	participationPoints        int
 	format                     string
-	place                      uint
+	location                   string
+	place                      int
 	sanctioningNumber          string
 	matches                    []Match
 	planeswalkerPointsYearly   int
@@ -69,6 +71,7 @@ func NewEvent() *Event {
 		players:                    0,
 		participationPoints:        0,
 		format:                     "",
+		location:                   "",
 		place:                      0,
 		sanctioningNumber:          "",
 		matches:                    matches,
@@ -77,35 +80,40 @@ func NewEvent() *Event {
 	}
 }
 
-func _printEvent(links []string, n *html.Node) []string {
-	if n.Type == html.ElementNode || n.Type == html.TextNode {
-		if n.Data != "" && n.Type == html.TextNode {
-			fmt.Printf("Node value: %s\n", n.Data)
-		}
-
-		// if n.Data == "tr" {
-		// 	fmt.Println("hei")
-		// }
-
-		for _, a := range n.Attr {
-			fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
-		}
-	}
-
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		links = _printEvent(links, c)
-	}
-	return links
+// addMatch adds a Match to an Event
+func (e *Event) addMatch(m Match) {
+	e.matches = append(e.matches, m)
 }
 
-func printEvent(eventData string) {
-	doc, err := html.Parse(strings.NewReader(eventData))
-	if err != nil {
-		log.Fatal(err)
+func (e *Event) addPlaneswalkerPoints(n *html.Node) {
+	switch n.FirstChild.NextSibling.FirstChild.Data {
+	case "Yearly:":
+		e.planeswalkerPointsYearly = _parseEventInt(n)
+	case "Lifetime:":
+		e.planeswalkerPointsLifetime = _parseEventInt(n)
+	}
+}
+
+func (e Event) String() string {
+	var s string
+
+	s = s + fmt.Sprintf("EventType           : %s\n", e.eventType)
+	s = s + fmt.Sprintf("EventMultiplier     : %s\n", e.eventMultiplier)
+	s = s + fmt.Sprintf("EventPlayers        : %d\n", e.players)
+	s = s + fmt.Sprintf("Participation points: %d\n", e.participationPoints)
+	s = s + fmt.Sprintf("Format              : %s\n", e.format)
+	s = s + fmt.Sprintf("Location:           : %s\n", e.location)
+	s = s + fmt.Sprintf("Place:              : %d\n", e.place)
+	s = s + fmt.Sprintf("Sanctioning number  : %s\n", e.sanctioningNumber)
+	s = s + fmt.Sprintf("Planeswalke Points\n")
+	s = s + fmt.Sprintf("    Yearly          : %d\n", e.planeswalkerPointsYearly)
+	s = s + fmt.Sprintf("    Lifetime        : %d\n", e.planeswalkerPointsLifetime)
+
+	for _, m := range e.matches {
+		s = s + fmt.Sprintf("Match: %s\n", m)
 	}
 
-	var parsedResults []string
-	_printEvent(parsedResults, doc)
+	return s
 }
 
 func _parseOpponents(opponents *[]string, n *html.Node) {
@@ -123,7 +131,6 @@ func _parseOpponents(opponents *[]string, n *html.Node) {
 
 func parseOpponents(n *html.Node) []string {
 	var opponents []string
-
 	_parseOpponents(&opponents, n)
 
 	return opponents
@@ -150,47 +157,61 @@ func parseMatch(n *html.Node) Match {
 				opponents = parseOpponents(c)
 			}
 		}
-
 	}
-
-	match := Match{
+	return Match{
 		place:    place,
 		result:   result,
 		points:   points,
 		opponent: opponents,
 	}
+}
 
-	fmt.Printf("Current match %v\n", match)
+func _parseEventString(n *html.Node) string {
+	return strings.TrimSpace(n.LastChild.Data)
+}
 
-	return match
+func _parseEventInt(n *html.Node) int {
+	val, err := strconv.Atoi(strings.TrimSpace(n.LastChild.Data))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return val
 }
 
 func _parseEvent(parsedEvent *Event, n *html.Node) {
-
-	// if strings.TrimSpace(n.Data) == "MatchHistoryRow" || true {
-	// 	trimmedData := strings.TrimSpace((n.Data))
-	// 	if trimmedData != "" {
-	// 		fmt.Printf("Node value: %s, nodetype: %v\n", trimmedData, n.Type)
-	// 	}
-	// }
-
-	if n.Type == html.ElementNode && n.Data == "tr" {
+	if n.Type == html.ElementNode && n.Data == "div" {
 		for _, a := range n.Attr {
-			if a.Key == "class" && a.Val == "MatchHistoryRow" {
-				_ = parseMatch(n)
+			if a.Key == "class" {
+				if a.Val == "EventType" {
+					parsedEvent.eventType = _parseEventString(n)
+				} else if a.Val == "EventMultiplier" {
+					parsedEvent.eventMultiplier = _parseEventString(n)
+				} else if a.Val == "EventPlayers" {
+					parsedEvent.players = _parseEventInt(n)
+				} else if a.Val == "EventParticipationPoints" {
+					parsedEvent.participationPoints = _parseEventInt(n)
+				} else if a.Val == "EventFormat" {
+					parsedEvent.format = _parseEventString(n)
+				} else if a.Val == "EventLocation" {
+					parsedEvent.location = _parseEventString(n)
+				} else if a.Val == "EventPlace" {
+					parsedEvent.place = _parseEventInt(n)
+				} else if a.Val == "EventSanctionNumber" {
+					parsedEvent.sanctioningNumber = _parseEventString(n)
+				} else if a.Val == "MatchTotal" {
+					parsedEvent.addPlaneswalkerPoints(n)
+				}
 			}
 		}
 	}
 
-	// if n.Type == html.ElementNode || n.Type == html.TextNode {
-	// 	if n.Data != "" && n.Type == html.TextNode {
-	// 		fmt.Printf("Node value: %s\n", n.Data)
-	// 	}
-
-	// 	for _, a := range n.Attr {
-	// 		fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
-	// 	}
-	// }
+	if n.Type == html.ElementNode && n.Data == "tr" {
+		for _, a := range n.Attr {
+			if a.Key == "class" && a.Val == "MatchHistoryRow" {
+				parsedEvent.addMatch(parseMatch(n))
+			}
+		}
+	}
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		_parseEvent(parsedEvent, c)
@@ -206,4 +227,5 @@ func parseEvent(eventData string) {
 
 	var parsedEvent = NewEvent()
 	_parseEvent(parsedEvent, doc)
+	fmt.Println(parsedEvent)
 }

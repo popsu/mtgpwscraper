@@ -102,7 +102,7 @@ func parseEventFile(filename string) {
 func main() {
 	parseFlags()
 
-	filename := "data/event-504380.html"
+	filename := "data/event-896252.html"
 	parseEventFile(filename)
 
 	os.Exit(0)
