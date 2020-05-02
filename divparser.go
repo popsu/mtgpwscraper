@@ -42,6 +42,11 @@ type Match struct {
 	opponent []string
 }
 
+func (m Match) String() string {
+	return fmt.Sprintf("Place: %s, Result %s, Points: %s, Opponents: %s",
+		m.place, m.result, m.points, m.opponent)
+}
+
 type Event struct {
 	eventType                  string
 	eventMultiplier            string
@@ -103,17 +108,23 @@ func printEvent(eventData string) {
 	_printEvent(parsedResults, doc)
 }
 
+func _parseOpponents(opponents *[]string, n *html.Node) {
+	for _, a := range n.Attr {
+		if a.Key == "class" && a.Val == "TeamOpponent" {
+			opponent := n.FirstChild.Data
+			*opponents = append(*opponents, opponent)
+		}
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		_parseOpponents(opponents, c)
+	}
+}
+
 func parseOpponents(n *html.Node) []string {
 	var opponents []string
 
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		for _, a := range c.Attr {
-			if a.Key == "class" && a.Val == "TeamOpponent" {
-				opponent := c.FirstChild.Data
-				opponents = append(opponents, opponent)
-			}
-		}
-	}
+	_parseOpponents(&opponents, n)
 
 	return opponents
 }
@@ -125,36 +136,33 @@ func parseMatch(n *html.Node) Match {
 	var opponents []string
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		fmt.Printf("Data: %s, Namespace: %s, Attr: %v\n", c.Data, c.Namespace, c.Attr)
-
 		for _, a := range c.Attr {
 			if a.Key == "class" && a.Val == "MatchPlace" {
 				place = c.FirstChild.Data
-				fmt.Printf("Match place: %s\n", place)
 			}
 			if a.Key == "class" && a.Val == "MatchResult" {
-				result := NewMatchResult(c.FirstChild.Data)
-				fmt.Printf("Match result: %s\n", result)
+				result = NewMatchResult(c.FirstChild.Data)
 			}
 			if a.Key == "class" && a.Val == "MatchPoints" {
 				points = c.FirstChild.Data
-				fmt.Printf("Match Points: %s\n", points)
 			}
-
 			if a.Key == "class" && a.Val == "MatchOpponent" {
 				opponents = parseOpponents(c)
-				fmt.Printf("Match opponent: %v\n", opponents)
 			}
 		}
 
 	}
 
-	return Match{
+	match := Match{
 		place:    place,
 		result:   result,
 		points:   points,
 		opponent: opponents,
 	}
+
+	fmt.Printf("Current match %v\n", match)
+
+	return match
 }
 
 func _parseEvent(parsedEvent *Event, n *html.Node) {
