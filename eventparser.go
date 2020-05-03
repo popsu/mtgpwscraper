@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
@@ -22,6 +25,13 @@ func (m MatchResult) String() string {
 	return [...]string{"Bye", "Win", "Loss", "Draw"}[m]
 }
 
+func (m MatchResult) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBufferString(`"`)
+	buffer.WriteString(m.String())
+	buffer.WriteString(`"`)
+	return buffer.Bytes(), nil
+}
+
 func NewMatchResult(result string) MatchResult {
 	switch result {
 	case "Bye":
@@ -37,65 +47,77 @@ func NewMatchResult(result string) MatchResult {
 }
 
 type Match struct {
-	place    string
-	result   MatchResult
-	points   string
-	opponent []string
+	Place     string      `json:",omitempty"`
+	Result    MatchResult `json:",omitempty"`
+	Points    string      `json:",omitempty"`
+	Opponents []string    `json:",omitempty"`
 }
 
 func (m Match) String() string {
 	return fmt.Sprintf("Place: %s, Result %s, Points: %s, Opponents: %s",
-		m.place, m.result, m.points, m.opponent)
+		m.Place, m.Result, m.Points, m.Opponents)
 }
 
 type Event struct {
-	eventType                      string
-	eventMultiplier                string
-	players                        int
-	participationPoints            int
-	format                         string
-	location                       string
-	place                          int
-	sanctioningNumber              string
-	matches                        []Match
-	planeswalkerPointsYearly       int
-	planeswalkerPointsProfessional int
-	planeswalkerPointsLifetime     int
+	EventType                      string  `json:",omitempty"`
+	EventMultiplier                string  `json:",omitempty"`
+	Players                        int     `json:",omitempty"`
+	ParticipationPoints            int     `json:",omitempty"`
+	Format                         string  `json:",omitempty"`
+	Location                       string  `json:",omitempty"`
+	Place                          int     `json:",omitempty"`
+	SanctioningNumber              string  `json:",omitempty"`
+	Matches                        []Match `json:",omitempty"`
+	PlaneswalkerPointsYearly       int     `json:",omitempty"`
+	PlaneswalkerPointsProfessional int     `json:",omitempty"`
+	PlaneswalkerPointsLifetime     int     `json:",omitempty"`
+}
+
+func (e Event) toJson() {
+	bytes, err := json.Marshal(e)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = ioutil.WriteFile("testdata.json", bytes, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // addMatch adds a Match to an Event
 func (e *Event) addMatch(m Match) {
-	e.matches = append(e.matches, m)
+	e.Matches = append(e.Matches, m)
 }
 
 func (e *Event) addPlaneswalkerPoints(n *html.Node) {
 	switch n.FirstChild.NextSibling.FirstChild.Data {
 	case "Yearly:":
-		e.planeswalkerPointsYearly = _parseEventInt(n)
+		e.PlaneswalkerPointsYearly = _parseEventInt(n)
 	case "Professional:":
-		e.planeswalkerPointsProfessional = _parseEventInt(n)
+		e.PlaneswalkerPointsProfessional = _parseEventInt(n)
 	case "Lifetime:":
-		e.planeswalkerPointsLifetime = _parseEventInt(n)
+		e.PlaneswalkerPointsLifetime = _parseEventInt(n)
 	}
 }
 
 func (e Event) String() string {
 	var s string
 
-	s = s + fmt.Sprintf("EventType           : %s\n", e.eventType)
-	s = s + fmt.Sprintf("EventMultiplier     : %s\n", e.eventMultiplier)
-	s = s + fmt.Sprintf("EventPlayers        : %d\n", e.players)
-	s = s + fmt.Sprintf("Participation points: %d\n", e.participationPoints)
-	s = s + fmt.Sprintf("Format              : %s\n", e.format)
-	s = s + fmt.Sprintf("Location:           : %s\n", e.location)
-	s = s + fmt.Sprintf("Place:              : %d\n", e.place)
-	s = s + fmt.Sprintf("Sanctioning number  : %s\n", e.sanctioningNumber)
+	s = s + fmt.Sprintf("EventType           : %s\n", e.EventType)
+	s = s + fmt.Sprintf("EventMultiplier     : %s\n", e.EventMultiplier)
+	s = s + fmt.Sprintf("EventPlayers        : %d\n", e.Players)
+	s = s + fmt.Sprintf("Participation points: %d\n", e.ParticipationPoints)
+	s = s + fmt.Sprintf("Format              : %s\n", e.Format)
+	s = s + fmt.Sprintf("Location:           : %s\n", e.Location)
+	s = s + fmt.Sprintf("Place:              : %d\n", e.Place)
+	s = s + fmt.Sprintf("Sanctioning number  : %s\n", e.SanctioningNumber)
 	s = s + fmt.Sprintf("Planeswalker Points\n")
-	s = s + fmt.Sprintf("    Yearly          : %d\n", e.planeswalkerPointsYearly)
-	s = s + fmt.Sprintf("    Professional    : %d\n", e.planeswalkerPointsProfessional)
-	s = s + fmt.Sprintf("    Lifetime        : %d\n", e.planeswalkerPointsLifetime)
+	s = s + fmt.Sprintf("    Yearly          : %d\n", e.PlaneswalkerPointsYearly)
+	s = s + fmt.Sprintf("    Professional    : %d\n", e.PlaneswalkerPointsProfessional)
+	s = s + fmt.Sprintf("    Lifetime        : %d\n", e.PlaneswalkerPointsLifetime)
 
-	for _, m := range e.matches {
+	for _, m := range e.Matches {
 		s = s + fmt.Sprintf("Match: %s\n", m)
 	}
 
@@ -145,10 +167,10 @@ func parseMatch(n *html.Node) Match {
 		}
 	}
 	return Match{
-		place:    place,
-		result:   result,
-		points:   points,
-		opponent: opponents,
+		Place:     place,
+		Result:    result,
+		Points:    points,
+		Opponents: opponents,
 	}
 }
 
@@ -169,21 +191,21 @@ func _parseEvent(parsedEvent *Event, n *html.Node) {
 		for _, a := range n.Attr {
 			if a.Key == "class" {
 				if a.Val == "EventType" {
-					parsedEvent.eventType = _parseEventString(n)
+					parsedEvent.EventType = _parseEventString(n)
 				} else if a.Val == "EventMultiplier" {
-					parsedEvent.eventMultiplier = _parseEventString(n)
+					parsedEvent.EventMultiplier = _parseEventString(n)
 				} else if a.Val == "EventPlayers" {
-					parsedEvent.players = _parseEventInt(n)
+					parsedEvent.Players = _parseEventInt(n)
 				} else if a.Val == "EventParticipationPoints" {
-					parsedEvent.participationPoints = _parseEventInt(n)
+					parsedEvent.ParticipationPoints = _parseEventInt(n)
 				} else if a.Val == "EventFormat" {
-					parsedEvent.format = _parseEventString(n)
+					parsedEvent.Format = _parseEventString(n)
 				} else if a.Val == "EventLocation" {
-					parsedEvent.location = _parseEventString(n)
+					parsedEvent.Location = _parseEventString(n)
 				} else if a.Val == "EventPlace" {
-					parsedEvent.place = _parseEventInt(n)
+					parsedEvent.Place = _parseEventInt(n)
 				} else if a.Val == "EventSanctionNumber" {
-					parsedEvent.sanctioningNumber = _parseEventString(n)
+					parsedEvent.SanctioningNumber = _parseEventString(n)
 				} else if a.Val == "MatchTotal" {
 					parsedEvent.addPlaneswalkerPoints(n)
 				}
@@ -205,7 +227,7 @@ func _parseEvent(parsedEvent *Event, n *html.Node) {
 
 }
 
-func parseEvent(eventData string) {
+func parseEvent(eventData string) *Event {
 	doc, err := html.Parse(strings.NewReader(eventData))
 	if err != nil {
 		log.Fatal(err)
@@ -213,5 +235,6 @@ func parseEvent(eventData string) {
 
 	var parsedEvent = &Event{}
 	_parseEvent(parsedEvent, doc)
-	fmt.Println(parsedEvent)
+
+	return parsedEvent
 }

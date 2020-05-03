@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -88,7 +89,7 @@ func parseFlags() {
 	flag.Parse()
 }
 
-func parseEventFile(filename string) {
+func parseEventFile(filename string) *Event {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -96,10 +97,10 @@ func parseEventFile(filename string) {
 
 	text := string(content)
 
-	parseEvent(text)
+	return parseEvent(text)
 }
 
-func parseHistoryFile(filename string) {
+func parseHistoryFile(filename string) *EventHistory {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -107,11 +108,71 @@ func parseHistoryFile(filename string) {
 
 	text := string(content)
 
-	parseHistory(text)
+	return parseHistory(text)
+}
+
+func parseAllHistoryFiles(datafolder string) {
+	files, err := ioutil.ReadDir(datafolder)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	eventHistory := parseHistoryFile(path.Join(datafolder, saveFileEventHistory))
+	events := make(map[string]Event)
+	r := regexp.MustCompile(`^event-([0-9]*)[.]html$`)
+
+	// Parse
+	for _, file := range files {
+		matches := r.FindStringSubmatch((file.Name()))
+		if len(matches) > 1 {
+			eventid := matches[1]
+			parsedEvent := parseEventFile(path.Join(datafolder, file.Name()))
+			events[eventid] = *parsedEvent
+		}
+	}
+
+	// Combine
+	allEvents := AllEvents{}
+
+	keys := make([]string, len(eventHistory.events))
+
+	// Sort by numerical value instead of string value
+	for k := range eventHistory.events {
+		keys = append(keys, k)
+	}
+	// sort.Slice(keys, func(i, j int) bool {
+	// 	inum, err := strconv.Atoi(keys[i])
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	jnum, err := strconv.Atoi(keys[j])
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	return inum < jnum
+	// })
+
+	for _, k := range keys {
+		if _, ok := events[k]; ok {
+			fullEvent := FullEvent{
+				EventInfo: eventHistory.events[k],
+				Event:     events[k],
+			}
+
+			allEvents.AddEvent(&fullEvent)
+		}
+	}
+
+	// Write to file
+	allEvents.toJson("testdata.json")
 }
 
 func main() {
 	parseFlags()
+
+	parseAllHistoryFiles("data")
+
+	os.Exit(0)
 
 	filename := "data/event-896252.html"
 	historyFilename := "data/eventnames.html"

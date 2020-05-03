@@ -30,22 +30,22 @@ func (e EventHistory) String() string {
 }
 
 type EventInfo struct {
-	date           civil.Date
-	description    string
-	location       string
-	lifeTimePoints string
-	proPoints      string
+	Date           civil.Date
+	Description    string
+	Location       string
+	LifeTimePoints string
+	ProPoints      string
 	ID             string
 }
 
 func (e EventInfo) String() string {
 	var s string
 
-	s = s + fmt.Sprintf("Date           : %s\n", e.date)
-	s = s + fmt.Sprintf("Description    : %s\n", e.description)
-	s = s + fmt.Sprintf("Location       : %s\n", e.location)
-	s = s + fmt.Sprintf("LifetimePoints : %s\n", e.lifeTimePoints)
-	s = s + fmt.Sprintf("ProPoints      : %s\n", e.proPoints)
+	s = s + fmt.Sprintf("Date           : %s\n", e.Date)
+	s = s + fmt.Sprintf("Description    : %s\n", e.Description)
+	s = s + fmt.Sprintf("Location       : %s\n", e.Location)
+	s = s + fmt.Sprintf("LifetimePoints : %s\n", e.LifeTimePoints)
+	s = s + fmt.Sprintf("ProPoints      : %s\n", e.ProPoints)
 	s = s + fmt.Sprintf("ID             : %s\n", e.ID)
 
 	return s
@@ -94,15 +94,15 @@ func parseHistoryEvent(eventInfo *EventInfo, n *html.Node) {
 			if a.Key == "class" && a.Val == "UnLocked" {
 				eventInfo.ID = _parseEventID(n)
 			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Date" {
-				eventInfo.date = _parseEventDate(n)
+				eventInfo.Date = _parseEventDate(n)
 			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Description" {
-				eventInfo.description = _parseEventDescription(n)
+				eventInfo.Description = _parseEventDescription(n)
 			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Location" {
-				eventInfo.location = _parseEventLocation(n)
+				eventInfo.Location = _parseEventLocation(n)
 			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel LifetimePoints" {
-				eventInfo.lifeTimePoints = _parseEventLifetimePoints(n)
+				eventInfo.LifeTimePoints = _parseEventLifetimePoints(n)
 			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel ProPoints" {
-				eventInfo.proPoints = _parseEventProPoints(n)
+				eventInfo.ProPoints = _parseEventProPoints(n)
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func _parseHistory(parsedHistory *EventHistory, n *html.Node) {
 
 }
 
-func parseHistory(eventData string) {
+func parseHistory(eventData string) *EventHistory {
 	doc, err := html.Parse(strings.NewReader(eventData))
 	if err != nil {
 		log.Fatal(err)
@@ -138,6 +138,7 @@ func parseHistory(eventData string) {
 
 	parsedHistory := NewEventHistory()
 	_parseHistory(parsedHistory, doc)
-	fmt.Println(parsedHistory.events["896252"])
-	fmt.Println(parsedHistory)
+	// fmt.Println(parsedHistory.events["896252"])
+	// fmt.Println(parsedHistory)
+	return parsedHistory
 }
