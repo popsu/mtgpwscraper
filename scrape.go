@@ -91,7 +91,7 @@ func parseFlags() {
 	flag.Parse()
 }
 
-func parseEventFile(filename string) *Event {
+func parseEventFile(filename string) *EventDetails {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -120,7 +120,7 @@ func parseAllHistoryFiles(datafolder string) {
 	}
 
 	eventHistory := parseHistoryFile(path.Join(datafolder, saveFileEventHistory))
-	events := make(map[string]Event)
+	events := make(map[string]EventDetails)
 	r := regexp.MustCompile(`^event-([0-9]*)[.]html$`)
 
 	// Parse
@@ -160,7 +160,7 @@ func parseAllHistoryFiles(datafolder string) {
 		if _, ok := events[k]; ok {
 			fullEvent := FullEvent{
 				EventInfo: eventHistory.events[k],
-				Event:     events[k],
+				EventDetails:     events[k],
 			}
 
 			allEvents.AddEvent(&fullEvent)

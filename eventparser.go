@@ -58,7 +58,7 @@ func (m Match) String() string {
 		m.Place, m.Result, m.Points, m.Opponents)
 }
 
-type Event struct {
+type EventDetails struct {
 	EventType                      string  `json:",omitempty"`
 	EventMultiplier                string  `json:",omitempty"`
 	Players                        int     `json:",omitempty"`
@@ -73,7 +73,7 @@ type Event struct {
 	PlaneswalkerPointsLifetime     int     `json:",omitempty"`
 }
 
-func (e Event) toJson() {
+func (e EventDetails) toJson() {
 	bytes, err := json.Marshal(e)
 	if err != nil {
 		log.Fatal(err)
@@ -86,11 +86,11 @@ func (e Event) toJson() {
 }
 
 // addMatch adds a Match to an Event
-func (e *Event) addMatch(m Match) {
+func (e *EventDetails) addMatch(m Match) {
 	e.Matches = append(e.Matches, m)
 }
 
-func (e *Event) addPlaneswalkerPoints(n *html.Node) {
+func (e *EventDetails) addPlaneswalkerPoints(n *html.Node) {
 	switch n.FirstChild.NextSibling.FirstChild.Data {
 	case "Yearly:":
 		e.PlaneswalkerPointsYearly = _parseEventInt(n)
@@ -101,7 +101,7 @@ func (e *Event) addPlaneswalkerPoints(n *html.Node) {
 	}
 }
 
-func (e Event) String() string {
+func (e EventDetails) String() string {
 	var s string
 
 	s = s + fmt.Sprintf("EventType           : %s\n", e.EventType)
@@ -186,7 +186,7 @@ func _parseEventInt(n *html.Node) int {
 	return val
 }
 
-func _parseEvent(parsedEvent *Event, n *html.Node) {
+func _parseEvent(parsedEvent *EventDetails, n *html.Node) {
 	if n.Type == html.ElementNode && n.Data == "div" {
 		for _, a := range n.Attr {
 			if a.Key == "class" {
@@ -227,13 +227,13 @@ func _parseEvent(parsedEvent *Event, n *html.Node) {
 
 }
 
-func parseEvent(eventData string) *Event {
+func parseEvent(eventData string) *EventDetails {
 	doc, err := html.Parse(strings.NewReader(eventData))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var parsedEvent = &Event{}
+	var parsedEvent = &EventDetails{}
 	_parseEvent(parsedEvent, doc)
 
 	return parsedEvent

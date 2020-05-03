@@ -7,8 +7,8 @@ import (
 )
 
 type FullEvent struct {
-	EventInfo EventInfo
-	Event     Event
+	EventInfo    EventInfo
+	EventDetails EventDetails
 }
 
 func (fe FullEvent) toJson(filename string) {
@@ -32,7 +32,7 @@ func (ae *AllEvents) AddEvent(fe *FullEvent) {
 }
 
 func (ae AllEvents) toJson(filename string) {
-	bytes, err := json.Marshal(ae)
+	bytes, err := json.MarshalIndent(ae, "", "    ")
 	if err != nil {
 		log.Fatal(err)
 	}
