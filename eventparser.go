@@ -62,24 +62,6 @@ type Event struct {
 	planeswalkerPointsLifetime int
 }
 
-func NewEvent() *Event {
-	var matches []Match
-
-	return &Event{
-		eventType:                  "",
-		eventMultiplier:            "",
-		players:                    0,
-		participationPoints:        0,
-		format:                     "",
-		location:                   "",
-		place:                      0,
-		sanctioningNumber:          "",
-		matches:                    matches,
-		planeswalkerPointsYearly:   0,
-		planeswalkerPointsLifetime: 0,
-	}
-}
-
 // addMatch adds a Match to an Event
 func (e *Event) addMatch(m Match) {
 	e.matches = append(e.matches, m)
@@ -225,7 +207,7 @@ func parseEvent(eventData string) {
 		log.Fatal(err)
 	}
 
-	var parsedEvent = NewEvent()
+	var parsedEvent = &Event{}
 	_parseEvent(parsedEvent, doc)
 	fmt.Println(parsedEvent)
 }
