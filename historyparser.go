@@ -20,6 +20,15 @@ func NewEventHistory() *EventHistory {
 	}
 }
 
+func (e EventHistory) String() string {
+	var s string
+
+	for _, v := range e.events {
+		s = s + fmt.Sprintf("%s\n", v)
+	}
+	return s
+}
+
 type EventInfo struct {
 	date           civil.Date
 	description    string
@@ -27,17 +36,6 @@ type EventInfo struct {
 	lifeTimePoints string
 	proPoints      string
 	ID             string
-}
-
-func NewEventInfo() *EventInfo {
-	return &EventInfo{
-		date:           civil.Date{},
-		description:    "",
-		location:       "",
-		lifeTimePoints: "",
-		proPoints:      "",
-		ID:             "",
-	}
 }
 
 func (e EventInfo) String() string {
@@ -119,7 +117,7 @@ func _parseHistory(parsedHistory *EventHistory, n *html.Node) {
 	if n.Type == html.ElementNode && n.Data == "div" {
 		for _, a := range n.Attr {
 			if a.Key == "class" && a.Val == "HistoryPanelRow" {
-				eventInfo := NewEventInfo()
+				eventInfo := &EventInfo{}
 				parseHistoryEvent(eventInfo, n)
 				parsedHistory.events[eventInfo.ID] = *eventInfo
 			}
@@ -141,4 +139,5 @@ func parseHistory(eventData string) {
 	parsedHistory := NewEventHistory()
 	_parseHistory(parsedHistory, doc)
 	fmt.Println(parsedHistory.events["896252"])
+	fmt.Println(parsedHistory)
 }
