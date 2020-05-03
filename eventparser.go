@@ -49,17 +49,18 @@ func (m Match) String() string {
 }
 
 type Event struct {
-	eventType                  string
-	eventMultiplier            string
-	players                    int
-	participationPoints        int
-	format                     string
-	location                   string
-	place                      int
-	sanctioningNumber          string
-	matches                    []Match
-	planeswalkerPointsYearly   int
-	planeswalkerPointsLifetime int
+	eventType                      string
+	eventMultiplier                string
+	players                        int
+	participationPoints            int
+	format                         string
+	location                       string
+	place                          int
+	sanctioningNumber              string
+	matches                        []Match
+	planeswalkerPointsYearly       int
+	planeswalkerPointsProfessional int
+	planeswalkerPointsLifetime     int
 }
 
 // addMatch adds a Match to an Event
@@ -71,6 +72,8 @@ func (e *Event) addPlaneswalkerPoints(n *html.Node) {
 	switch n.FirstChild.NextSibling.FirstChild.Data {
 	case "Yearly:":
 		e.planeswalkerPointsYearly = _parseEventInt(n)
+	case "Professional:":
+		e.planeswalkerPointsProfessional = _parseEventInt(n)
 	case "Lifetime:":
 		e.planeswalkerPointsLifetime = _parseEventInt(n)
 	}
@@ -87,8 +90,9 @@ func (e Event) String() string {
 	s = s + fmt.Sprintf("Location:           : %s\n", e.location)
 	s = s + fmt.Sprintf("Place:              : %d\n", e.place)
 	s = s + fmt.Sprintf("Sanctioning number  : %s\n", e.sanctioningNumber)
-	s = s + fmt.Sprintf("Planeswalke Points\n")
+	s = s + fmt.Sprintf("Planeswalker Points\n")
 	s = s + fmt.Sprintf("    Yearly          : %d\n", e.planeswalkerPointsYearly)
+	s = s + fmt.Sprintf("    Professional    : %d\n", e.planeswalkerPointsProfessional)
 	s = s + fmt.Sprintf("    Lifetime        : %d\n", e.planeswalkerPointsLifetime)
 
 	for _, m := range e.matches {
