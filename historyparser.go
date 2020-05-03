@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
+	"cloud.google.com/go/civil"
 	"golang.org/x/net/html"
 )
 
@@ -14,34 +14,43 @@ type EventHistory struct {
 }
 
 func NewEventHistory() *EventHistory {
-	var events map[string]EventInfo
+	events := make(map[string]EventInfo)
 	return &EventHistory{
 		events: events,
 	}
 }
 
 type EventInfo struct {
-	date           time.Time
+	date           civil.Date
 	description    string
 	location       string
-	lifeTimePoints int
-	proPoints      int
+	lifeTimePoints string
+	proPoints      string
 	ID             string
 }
 
 func NewEventInfo() *EventInfo {
 	return &EventInfo{
-		date:           time.Time{},
+		date:           civil.Date{},
 		description:    "",
 		location:       "",
-		lifeTimePoints: 0,
-		proPoints:      0,
+		lifeTimePoints: "",
+		proPoints:      "",
 		ID:             "",
 	}
 }
 
 func (e EventInfo) String() string {
-	return e.ID
+	var s string
+
+	s = s + fmt.Sprintf("Date           : %s\n", e.date)
+	s = s + fmt.Sprintf("Description    : %s\n", e.description)
+	s = s + fmt.Sprintf("Location       : %s\n", e.location)
+	s = s + fmt.Sprintf("LifetimePoints : %s\n", e.lifeTimePoints)
+	s = s + fmt.Sprintf("ProPoints      : %s\n", e.proPoints)
+	s = s + fmt.Sprintf("ID             : %s\n", e.ID)
+
+	return s
 }
 
 func _parseEventID(n *html.Node) string {
@@ -55,11 +64,47 @@ func _parseEventID(n *html.Node) string {
 	return ""
 }
 
+func _parseEventDate(n *html.Node) civil.Date {
+	dateRFC3339 := n.FirstChild.Data
+
+	d, err := civil.ParseDate(dateRFC3339)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return d
+}
+
+func _parseEventLocation(n *html.Node) string {
+	return n.FirstChild.Data
+}
+
+func _parseEventDescription(n *html.Node) string {
+	return n.FirstChild.Data
+}
+
+func _parseEventLifetimePoints(n *html.Node) string {
+	return n.FirstChild.Data
+}
+
+func _parseEventProPoints(n *html.Node) string {
+	return n.FirstChild.Data
+}
+
 func parseHistoryEvent(eventInfo *EventInfo, n *html.Node) {
 	if n.Type == html.ElementNode && n.Data == "div" {
 		for _, a := range n.Attr {
 			if a.Key == "class" && a.Val == "UnLocked" {
 				eventInfo.ID = _parseEventID(n)
+			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Date" {
+				eventInfo.date = _parseEventDate(n)
+			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Description" {
+				eventInfo.description = _parseEventDescription(n)
+			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel Location" {
+				eventInfo.location = _parseEventLocation(n)
+			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel LifetimePoints" {
+				eventInfo.lifeTimePoints = _parseEventLifetimePoints(n)
+			} else if a.Key == "class" && a.Val == "HistoryPanelHeaderLabel ProPoints" {
+				eventInfo.proPoints = _parseEventProPoints(n)
 			}
 		}
 	}
@@ -76,7 +121,7 @@ func _parseHistory(parsedHistory *EventHistory, n *html.Node) {
 			if a.Key == "class" && a.Val == "HistoryPanelRow" {
 				eventInfo := NewEventInfo()
 				parseHistoryEvent(eventInfo, n)
-				fmt.Println(eventInfo)
+				parsedHistory.events[eventInfo.ID] = *eventInfo
 			}
 		}
 	}
@@ -95,5 +140,5 @@ func parseHistory(eventData string) {
 
 	parsedHistory := NewEventHistory()
 	_parseHistory(parsedHistory, doc)
-	fmt.Println(parsedHistory)
+	fmt.Println(parsedHistory.events["896252"])
 }
