@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -134,23 +136,25 @@ func parseAllHistoryFiles(datafolder string) {
 	// Combine
 	allEvents := AllEvents{}
 
-	keys := make([]string, len(eventHistory.events))
+	keys := make([]string, 0, len(events))
 
 	// Sort by numerical value instead of string value
-	for k := range eventHistory.events {
+	for k := range events {
 		keys = append(keys, k)
 	}
-	// sort.Slice(keys, func(i, j int) bool {
-	// 	inum, err := strconv.Atoi(keys[i])
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	jnum, err := strconv.Atoi(keys[j])
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	return inum < jnum
-	// })
+	sort.Slice(keys, func(i, j int) bool {
+		inum, err := strconv.Atoi(keys[i])
+		if err != nil {
+			// return false
+			log.Fatal(err)
+		}
+		jnum, err := strconv.Atoi(keys[j])
+		if err != nil {
+			// return false
+			log.Fatal(err)
+		}
+		return inum < jnum
+	})
 
 	for _, k := range keys {
 		if _, ok := events[k]; ok {
