@@ -60,7 +60,7 @@ func getPointHistory(dcinumber string) string {
 	return res
 }
 
-func fetchEventData(eventID string) string {
+func fetchEventData(eventID, pwpCookieValue string) string {
 	client := createInsecureClient()
 
 	postPayload := fmt.Sprintf("ID=%s", eventID)

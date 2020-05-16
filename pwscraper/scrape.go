@@ -1,7 +1,6 @@
 package pwscraper
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,17 +15,25 @@ import (
 	"golang.org/x/net/html"
 )
 
-const (
-	saveFolder           = "data"
-	saveFileFormat       = "event-%s.html"
-	saveFileEventHistory = "eventnames.html"
-	saveJSONFilename     = "planeswalkerhistory.json"
-)
+type Config struct {
+	DciNumber            string
+	PwpCookieValue       string
+	SaveFolder           string
+	SaveFileFormat       string
+	SaveFileEventHistory string
+	SaveJSONFilename     string
+}
 
-var (
-	pwpCookieValue = ""
-	dciNumber      = ""
-)
+func NewDefaultConfig() *Config {
+	return &Config{
+		DciNumber:            "",
+		PwpCookieValue:       "",
+		SaveFolder:           "data",
+		SaveFileFormat:       "event-%s.html",
+		SaveFileEventHistory: "eventnames.html",
+		SaveJSONFilename:     "planeswalkerhistory.json",
+	}
+}
 
 func parseEventIDs(pointHistory string) []string {
 	var eventIDs []string
@@ -65,10 +72,10 @@ func _parseEventIDs(links []string, n *html.Node) []string {
 	return links
 }
 
-func fetchAndSaveEventData(eventID string, wg *sync.WaitGroup) {
+func fetchAndSaveEventData(eventID, pwpCookieValue, saveFolder, saveFileFormat string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	data := []byte(fetchEventData(eventID))
+	data := []byte(fetchEventData(eventID, pwpCookieValue))
 
 	filename := path.Join(saveFolder, fmt.Sprintf(saveFileFormat, eventID))
 	err := ioutil.WriteFile(filename, data, 0644)
@@ -77,20 +84,13 @@ func fetchAndSaveEventData(eventID string, wg *sync.WaitGroup) {
 	}
 }
 
-func savePointHistory(pointHistory string) {
+func savePointHistory(pointHistory, saveFolder, saveFileEventHistory string) {
 	filename := path.Join(saveFolder, saveFileEventHistory)
 	log.Printf("Saving Eventhistory to %s\n", filename)
 	err := ioutil.WriteFile(filename, []byte(pointHistory), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func parseFlags() {
-	flag.StringVar(&dciNumber, "dcinumber", "", "DCI Number")
-	flag.StringVar(&pwpCookieValue, "cookie", "", "Cookie named PWP.ASPXAUTH in wizards.com site")
-
-	flag.Parse()
 }
 
 func parseEventFile(filename string) *EventDetails {
@@ -115,7 +115,7 @@ func parseHistoryFile(filename string) *EventHistory {
 	return parseHistory(text)
 }
 
-func parseAllHistoryFiles(dciNumber, datafolder, saveFile string) {
+func parseAllHistoryFiles(dciNumber, datafolder, saveFileJSON, saveFileEventHistory string) {
 	files, err := ioutil.ReadDir(datafolder)
 	if err != nil {
 		log.Fatal(err)
@@ -170,43 +170,43 @@ func parseAllHistoryFiles(dciNumber, datafolder, saveFile string) {
 	}
 
 	// Write to file
-	log.Printf("Parsing all html into %s\n", saveFile)
-	allEvents.toJson(saveFile)
+	log.Printf("Parsing all html into %s\n", saveFileJSON)
+	allEvents.toJson(saveFileJSON)
 }
 
-func fetchAndSavePointHistory() string {
+func fetchAndSavePointHistory(dciNumber, saveFolder, saveFileEventHistory string) string {
 	pointHistory := getPointHistory(dciNumber)
-	savePointHistory(pointHistory)
+	savePointHistory(pointHistory, saveFolder, saveFileEventHistory)
 	return pointHistory
 }
 
-func FetcAndSaveAllEvents(pointHistory, historyFilename string) {
+func FetcAndSaveAllEvents(pointHistory, historyFilename, pwpCookieValue, saveFolder, saveFileFormat string) {
 	eventIDs := parseEventIDs(pointHistory)
-	log.Printf("Fetching %d events in parallel\n", len(eventIDs))
+	log.Printf("Fetching %d events to %s/\n", len(eventIDs), saveFolder)
+	log.Printf("If the EventDetails in the JSON file is empty, the cookie was incorrect")
 
 	var wg sync.WaitGroup
 	for _, eventID := range eventIDs {
 		wg.Add(1)
-		go fetchAndSaveEventData(eventID, &wg)
+		go fetchAndSaveEventData(eventID, pwpCookieValue, saveFolder, saveFileFormat, &wg)
 	}
 	wg.Wait()
 }
 
-func createSaveFolder() {
+func createSaveFolder(saveFolder string) {
 	err := os.Mkdir(saveFolder, 0700)
 	if err != nil {
-		log.Fatalf("Save folder %q already exists. Please remove it and retry. %s", saveFolder, err)
+		log.Fatalf("Savefolder %q already exists. Please remove it and retry. %s", saveFolder, err)
 	}
 }
 
-func Execute() {
-	parseFlags()
+func Execute(conf *Config) {
 	// Scrape
-	createSaveFolder()
-	pointHistory := fetchAndSavePointHistory()
-	historyFilename := path.Join(saveFolder, saveFileEventHistory)
-	FetcAndSaveAllEvents(pointHistory, historyFilename)
+	createSaveFolder(conf.SaveFolder)
+	pointHistory := fetchAndSavePointHistory(conf.DciNumber, conf.SaveFolder, conf.SaveFileEventHistory)
+	historyFilename := path.Join(conf.SaveFolder, conf.SaveFileEventHistory)
+	FetcAndSaveAllEvents(pointHistory, historyFilename, conf.PwpCookieValue, conf.SaveFolder, conf.SaveFileFormat)
 
 	// Parse all saved html files into one JSON
-	parseAllHistoryFiles(dciNumber, saveFolder, saveJSONFilename)
+	parseAllHistoryFiles(conf.DciNumber, conf.SaveFolder, conf.SaveJSONFilename, conf.SaveFileEventHistory)
 }

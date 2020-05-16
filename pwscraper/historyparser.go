@@ -138,7 +138,5 @@ func parseHistory(eventData string) *EventHistory {
 
 	parsedHistory := NewEventHistory()
 	_parseHistory(parsedHistory, doc)
-	// fmt.Println(parsedHistory.events["896252"])
-	// fmt.Println(parsedHistory)
 	return parsedHistory
 }
