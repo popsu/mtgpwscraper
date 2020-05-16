@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-BINS = bin/macos/pwscraper bin/win64/pwscraper.exe bin/linux64/pwscraper
+BINS = bin/macos/pwscraper-macos bin/win64/pwscraper-win64.exe bin/linux64/pwscraper-linux64
 GOSRC = $(shell find . -name '*.go')
 CGO_ENABLED = 0
 ENVVARS = CGO_ENABLED=$(CGO_ENABLED)
@@ -21,12 +21,12 @@ clean:
 	- go clean .
 	- rm -vrf bin/*
 
-bin/macos/pwscraper: $(GOSRC)
+bin/macos/pwscraper-macos: $(GOSRC)
 	$(ENVVARS) GOOS=darwin go build $(LDFLAGS) $(BUILDFLAGS) -o $@ $(PACKAGE)
 
-bin/win64/pwscraper.exe: $(GOSRC)
+bin/win64/pwscraper-win64.exe: $(GOSRC)
 	$(ENVVARS) GOOS=windows CC=x86_64-w64-mingw32-gcc \
 	go build $(LDFLAGS) $(BUILDWINFLAGS) -o $@ $(PACKAGE)
 
-bin/linux64/pwscraper: $(GOSRC)
+bin/linux64/pwscraper-linux64: $(GOSRC)
 	$(ENVVARS) go build $(LDFLAGS) $(BUILDFLAGS) -o $@ $(PACKAGE)
