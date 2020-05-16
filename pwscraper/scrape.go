@@ -28,7 +28,7 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		DciNumber:            "",
 		PwpCookieValue:       "",
-		SaveFolder:           "data",
+		SaveFolder:           "eventdata",
 		SaveFileFormat:       "event-%s.html",
 		SaveFileEventHistory: "eventnames.html",
 		SaveJSONFilename:     "planeswalkerhistory.json",
@@ -170,7 +170,7 @@ func parseAllHistoryFiles(dciNumber, datafolder, saveFileJSON, saveFileEventHist
 	}
 
 	// Write to file
-	log.Printf("Parsing all html into %s\n", saveFileJSON)
+	log.Printf("Parsing all events from %s into %s\n", datafolder, saveFileJSON)
 	allEvents.toJson(saveFileJSON)
 }
 
@@ -183,7 +183,7 @@ func fetchAndSavePointHistory(dciNumber, saveFolder, saveFileEventHistory string
 func FetcAndSaveAllEvents(pointHistory, historyFilename, pwpCookieValue, saveFolder, saveFileFormat string) {
 	eventIDs := parseEventIDs(pointHistory)
 	log.Printf("Fetching %d events to %s/\n", len(eventIDs), saveFolder)
-	log.Printf("If the EventDetails in the JSON file is empty, the cookie was incorrect")
+	log.Printf("If EventDetails in the final JSON file are empty, the cookie was incorrect")
 
 	var wg sync.WaitGroup
 	for _, eventID := range eventIDs {
@@ -194,6 +194,9 @@ func FetcAndSaveAllEvents(pointHistory, historyFilename, pwpCookieValue, saveFol
 }
 
 func createSaveFolder(saveFolder string) {
+	fmt.Printf("Deleting existing files from the save folder: %s\n", saveFolder)
+	os.RemoveAll(saveFolder)
+
 	err := os.Mkdir(saveFolder, 0700)
 	if err != nil {
 		log.Fatalf("Savefolder %q already exists. Please remove it and retry. %s", saveFolder, err)

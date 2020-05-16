@@ -13,6 +13,9 @@ PACKAGE = github.com/popsu/mtgpwscraper/cmd
 .PHONY: build
 build: $(BINS)
 
+.PHONY: dev
+dev: bin/linux64/pwscraper
+
 .PHONY: clean
 clean:
 	- go clean .
