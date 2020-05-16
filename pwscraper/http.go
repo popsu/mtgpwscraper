@@ -1,4 +1,4 @@
-package main
+package pwscraper
 
 import (
 	"crypto/tls"
@@ -38,6 +38,8 @@ func getPointHistory(dcinumber string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Printf("Fetching eventhistory for dcinumber %s\n", dcinumber)
 
 	response, err := client.Do(request)
 	if err != nil {

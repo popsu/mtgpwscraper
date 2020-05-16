@@ -1,4 +1,4 @@
-package main
+package pwscraper
 
 import (
 	"flag"
@@ -20,6 +20,7 @@ const (
 	saveFolder           = "data"
 	saveFileFormat       = "event-%s.html"
 	saveFileEventHistory = "eventnames.html"
+	saveJSONFilename     = "planeswalkerhistory.json"
 )
 
 var (
@@ -78,6 +79,7 @@ func fetchAndSaveEventData(eventID string, wg *sync.WaitGroup) {
 
 func savePointHistory(pointHistory string) {
 	filename := path.Join(saveFolder, saveFileEventHistory)
+	log.Printf("Saving Eventhistory to %s\n", filename)
 	err := ioutil.WriteFile(filename, []byte(pointHistory), 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -113,7 +115,7 @@ func parseHistoryFile(filename string) *EventHistory {
 	return parseHistory(text)
 }
 
-func parseAllHistoryFiles(datafolder string) {
+func parseAllHistoryFiles(dciNumber, datafolder, saveFile string) {
 	files, err := ioutil.ReadDir(datafolder)
 	if err != nil {
 		log.Fatal(err)
@@ -134,7 +136,7 @@ func parseAllHistoryFiles(datafolder string) {
 	}
 
 	// Combine
-	allEvents := AllEvents{}
+	allEvents := AllEvents{DCINumber: dciNumber}
 
 	keys := make([]string, 0, len(events))
 
@@ -159,8 +161,8 @@ func parseAllHistoryFiles(datafolder string) {
 	for _, k := range keys {
 		if _, ok := events[k]; ok {
 			fullEvent := FullEvent{
-				EventInfo: eventHistory.events[k],
-				EventDetails:     events[k],
+				EventInfo:    eventHistory.events[k],
+				EventDetails: events[k],
 			}
 
 			allEvents.AddEvent(&fullEvent)
@@ -168,40 +170,43 @@ func parseAllHistoryFiles(datafolder string) {
 	}
 
 	// Write to file
-	allEvents.toJson("testdata.json")
+	log.Printf("Parsing all html into %s\n", saveFile)
+	allEvents.toJson(saveFile)
 }
 
-func main() {
-	parseFlags()
-
-	parseAllHistoryFiles("data")
-
-	os.Exit(0)
-
-	filename := "data/event-896252.html"
-	historyFilename := "data/eventnames.html"
-
-	parseEventFile(filename)
-
-	os.Exit(0)
-
-	parseHistoryFile(historyFilename)
-
+func fetchAndSavePointHistory() string {
 	pointHistory := getPointHistory(dciNumber)
-	eventIDs := parseEventIDs(pointHistory)
-
-	err := os.Mkdir(saveFolder, 0700)
-	if err != nil {
-		log.Fatal(err)
-	}
 	savePointHistory(pointHistory)
+	return pointHistory
+}
+
+func FetcAndSaveAllEvents(pointHistory, historyFilename string) {
+	eventIDs := parseEventIDs(pointHistory)
+	log.Printf("Fetching %d events in parallel\n", len(eventIDs))
 
 	var wg sync.WaitGroup
-
 	for _, eventID := range eventIDs {
 		wg.Add(1)
 		go fetchAndSaveEventData(eventID, &wg)
 	}
-
 	wg.Wait()
+}
+
+func createSaveFolder() {
+	err := os.Mkdir(saveFolder, 0700)
+	if err != nil {
+		log.Fatalf("Save folder %q already exists. Please remove it and retry. %s", saveFolder, err)
+	}
+}
+
+func Execute() {
+	parseFlags()
+	// Scrape
+	createSaveFolder()
+	pointHistory := fetchAndSavePointHistory()
+	historyFilename := path.Join(saveFolder, saveFileEventHistory)
+	FetcAndSaveAllEvents(pointHistory, historyFilename)
+
+	// Parse all saved html files into one JSON
+	parseAllHistoryFiles(dciNumber, saveFolder, saveJSONFilename)
 }

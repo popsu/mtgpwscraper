@@ -1,4 +1,4 @@
-package main
+package pwscraper
 
 import (
 	"encoding/json"
@@ -24,7 +24,8 @@ func (fe FullEvent) toJson(filename string) {
 }
 
 type AllEvents struct {
-	Events []FullEvent
+	Events    []FullEvent
+	DCINumber string
 }
 
 func (ae *AllEvents) AddEvent(fe *FullEvent) {
